@@ -1,10 +1,5 @@
 import "./style.css";
-
-const canvasTemplate = document.createElement("template");
-
-canvasTemplate.innerHTML = `
-  <canvas id="game" width="300" height="300"></canvas>
-`;
+import "./game";
 
 const gameContainer = document.querySelector(
   "#gameContainer"
@@ -30,6 +25,11 @@ function handleSubmission() {
 }
 
 function startGame(string: string) {
-  const canvas = canvasTemplate.content.cloneNode(true) as HTMLCanvasElement;
-  canvas;
+  const game = document.createElement("jf-jumpgame");
+  gameContainer.appendChild(game);
+  console.log(game);
+}
+
+function endGame() {
+  gameContainer.innerHTML = "";
 }
