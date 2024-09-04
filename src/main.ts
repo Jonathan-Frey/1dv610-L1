@@ -17,16 +17,28 @@ nameButton.addEventListener("click", () => {
   handleSubmission();
 });
 
-function handleSubmission() {
-  const name = nameInput.value;
+nameInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") {
+    handleSubmission();
+  }
+});
+
+nameInput.addEventListener("input", () => {
+  const name = nameInput.value.trim();
   if (name.length === 0) {
     nameInput.classList.add("invalid");
+    nameButton.setAttribute("disabled", "");
   } else {
     nameInput.classList.remove("invalid");
-    nameInput.value = "";
-    inputContainer.setAttribute("hidden", "");
-    startGame(name);
+    nameButton.removeAttribute("disabled");
   }
+});
+
+function handleSubmission() {
+  const name = nameInput.value.trim();
+  nameInput.value = "";
+  inputContainer.setAttribute("hidden", "");
+  startGame(name);
 }
 
 function startGame(string: string) {

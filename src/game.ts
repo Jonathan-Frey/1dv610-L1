@@ -6,7 +6,9 @@ template.innerHTML = `
         }
 
         canvas {
-          border: 2px solid black;
+          border: 2px solid rgb(87, 87, 87);
+          background-color: rgb(67, 67, 67);
+          border-radius: 4px;
         }
     </style>
     <canvas id="gameCanvas" width="1000" height="300"></canvas>
@@ -16,7 +18,7 @@ export default class JumpGameElement extends HTMLElement {
   #gameCanvas: HTMLCanvasElement;
   #ctx: CanvasRenderingContext2D;
   #animationFrameId: number | null = null;
-  #gravity = 5;
+  #gravity = 1;
   #player: Player;
   #obstacles: Obstacle[] = [];
   #gameOver: boolean = false;
@@ -58,24 +60,28 @@ export default class JumpGameElement extends HTMLElement {
     const obstacleString = this.getAttribute("obstacleString");
     this.#ctx.font = "100px serif";
     if (obstacleString !== null) {
-      this.#obstacles = obstacleString.split("").map((char, i) => {
-        const textMetrics = this.#ctx.measureText(char);
-        const x = this.#gameCanvas.width + i * 500;
-        const y = this.#gameCanvas.height;
-        const position = new Position(x, y);
-        const top = position.y - textMetrics.actualBoundingBoxAscent;
-        const right = position.x + textMetrics.width;
-        const bottom = position.y;
-        const left = position.x;
-        const hitBox = new HitBox(top, right, bottom, left);
-        const obstacle = new Obstacle(char, new Position(x, y), hitBox);
-        return obstacle;
-      });
+      this.#obstacles = obstacleString
+        .split("")
+        .filter((char) => char !== " ")
+        .map((char, i) => {
+          const textMetrics = this.#ctx.measureText(char);
+          const x = this.#gameCanvas.width + i * 500;
+          const y = this.#gameCanvas.height;
+          const position = new Position(x, y);
+          const top = position.y - textMetrics.actualBoundingBoxAscent;
+          const right = position.x + textMetrics.width;
+          const bottom = position.y;
+          const left = position.x;
+          const hitBox = new HitBox(top, right, bottom, left);
+          const obstacle = new Obstacle(char, new Position(x, y), hitBox);
+          return obstacle;
+        });
     }
 
     window.addEventListener("keypress", (e) => {
       if (e.key === " " && this.#player.state === PlayerState.GROUNDED) {
         this.#player.state = PlayerState.JUMPING;
+        this.#player.velocity = -20;
       }
     });
     this.#startGame();
@@ -105,51 +111,55 @@ export default class JumpGameElement extends HTMLElement {
 
     this.#obstacles.forEach((obstacle) => {
       obstacle.moveX(-5);
-      console.log(
-        obstacle.hitBox.top,
-        " ",
-        obstacle.hitBox.right,
-        " ",
-        obstacle.hitBox.bottom,
-        " ",
-        obstacle.hitBox.left
-      );
     });
 
-    if (this.#player.state === PlayerState.JUMPING) {
-      // go upwards
+    if (this.#player.state !== PlayerState.GROUNDED) {
+      this.#player.velocity += this.#gravity;
       if (
-        this.#player.position.y >
-        this.#gameCanvas.height - this.#player.height * 4
+        this.#player.position.y + this.#player.velocity >
+        this.#gameCanvas.height - this.#player.height
       ) {
-        this.#player.moveY(-5);
-
-        // too high, stop going upwards
+        this.#player.setPosition(
+          new Position(
+            this.#player.position.x,
+            this.#gameCanvas.height - this.#player.height
+          )
+        );
+        this.#player.velocity = 0;
+        this.#player.state = PlayerState.GROUNDED;
       } else {
-        this.#player.state = PlayerState.FALLING;
+        this.#player.moveY(this.#player.velocity);
       }
-      // fall down
-    } else if (
-      this.#player.position.y <
-      this.#gameCanvas.height - this.#player.height
-    ) {
-      this.#player.moveY(this.#gravity);
-    } else {
-      this.#player.state = PlayerState.GROUNDED;
     }
 
     this.#obstacles.forEach((obstacle) => {
       if (obstacle.hitBox.isColliding(this.#player.hitBox)) {
+        const lossMessage = "You Lost!";
+        const textMetrics = this.#ctx.measureText(lossMessage);
         this.#gameOver = true;
+        this.#ctx.fillStyle = "rgb(255, 99, 71)";
+        this.#ctx.fillText(
+          lossMessage,
+          this.#gameCanvas.width / 2 - textMetrics.width / 2,
+          this.#gameCanvas.height / 2
+        );
         this.dispatchEvent(new CustomEvent("gameOver"));
       }
     });
 
-    if (this.#gameOver) {
-      this.#ctx.fillStyle = "red";
-    } else {
-      this.#ctx.fillStyle = "green";
+    if (this.#obstacles[this.#obstacles.length - 1].position.x < 0) {
+      this.#ctx.fillStyle = "rgb(50, 205, 50)";
+      const winMessage = "You Won!";
+      const textMetrics = this.#ctx.measureText(winMessage);
+      this.#gameOver = true;
+      this.#ctx.fillText(
+        winMessage,
+        this.#gameCanvas.width / 2 - textMetrics.width / 2,
+        this.#gameCanvas.height / 2
+      );
     }
+
+    this.#ctx.fillStyle = "rgb(255, 99, 71)";
 
     this.#ctx.fillRect(
       this.#player.position.x,
@@ -158,6 +168,7 @@ export default class JumpGameElement extends HTMLElement {
       this.#player.height
     );
 
+    this.#ctx.fillStyle = "rgb(255, 215, 0)";
     this.#obstacles.forEach((obstacle) => {
       this.#ctx.fillText(
         obstacle.letter,
@@ -172,6 +183,7 @@ customElements.define("jf-jumpgame", JumpGameElement);
 
 class Player {
   position: Position;
+  velocity: number = 0;
   #width: number;
   #height: number;
   hitBox: HitBox;
@@ -200,6 +212,13 @@ class Player {
   public moveY(amount: number) {
     this.position.y += amount;
     this.hitBox.moveY(amount);
+  }
+
+  public setPosition(position: Position) {
+    const deltaX = this.position.x - position.x;
+    const deltaY = this.position.y - position.y;
+    this.position = position;
+    this.hitBox.updatePosition(deltaX, deltaY);
   }
 }
 
@@ -250,11 +269,14 @@ class HitBox {
     this.right += amount;
   }
 
+  updatePosition(deltaX: number, deltaY: number) {
+    this.top += deltaY;
+    this.bottom += deltaY;
+    this.left += deltaX;
+    this.right += deltaX;
+  }
+
   isColliding(hitBox: HitBox): boolean {
-    console.log(this.right < hitBox.left);
-    console.log(this.left > hitBox.right);
-    console.log(this.bottom < hitBox.top);
-    console.log(this.top > hitBox.bottom);
     // Check if there is no overlap
     if (
       this.right < hitBox.left || // this is to the left of hitBox
