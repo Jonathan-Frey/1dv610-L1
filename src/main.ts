@@ -5,6 +5,10 @@ const gameContainer = document.querySelector(
   "#gameContainer"
 ) as HTMLDivElement;
 
+const inputContainer = document.querySelector(
+  "#inputContainer"
+) as HTMLDivElement;
+
 const nameInput = document.querySelector("#nameInput") as HTMLInputElement;
 
 const nameButton = document.querySelector("#nameButton") as HTMLButtonElement;
@@ -20,6 +24,7 @@ function handleSubmission() {
   } else {
     nameInput.classList.remove("invalid");
     nameInput.value = "";
+    inputContainer.setAttribute("hidden", "");
     startGame(name);
   }
 }
@@ -27,9 +32,13 @@ function handleSubmission() {
 function startGame(string: string) {
   const game = document.createElement("jf-jumpgame");
   game.setAttribute("obstacleString", string);
+  game.addEventListener("gameOver", endGame);
   gameContainer.appendChild(game);
 }
 
 function endGame() {
-  gameContainer.innerHTML = "";
+  setTimeout(() => {
+    gameContainer.innerHTML = "";
+    inputContainer.removeAttribute("hidden");
+  }, 2000);
 }

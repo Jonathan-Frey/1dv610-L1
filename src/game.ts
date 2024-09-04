@@ -87,7 +87,7 @@ export default class JumpGameElement extends HTMLElement {
 
   #startGame() {
     const update = () => {
-      this.#update();
+      if (!this.#gameOver) this.#update();
       this.#animationFrameId = requestAnimationFrame(update);
     };
     this.#animationFrameId = requestAnimationFrame(update);
@@ -138,19 +138,10 @@ export default class JumpGameElement extends HTMLElement {
       this.#player.state = PlayerState.GROUNDED;
     }
 
-    console.log(
-      this.#player.hitBox.top,
-      " ",
-      this.#player.hitBox.right,
-      " ",
-      this.#player.hitBox.bottom,
-      " ",
-      this.#player.hitBox.left
-    );
-
     this.#obstacles.forEach((obstacle) => {
       if (obstacle.hitBox.isColliding(this.#player.hitBox)) {
         this.#gameOver = true;
+        this.dispatchEvent(new CustomEvent("gameOver"));
       }
     });
 
