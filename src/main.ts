@@ -26,8 +26,8 @@ function handleSubmission() {
 
 function startGame(string: string) {
   const game = document.createElement("jf-jumpgame");
+  game.setAttribute("obstacleString", string);
   gameContainer.appendChild(game);
-  console.log(game);
 }
 
 function endGame() {
